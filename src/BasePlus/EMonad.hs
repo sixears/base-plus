@@ -1,8 +1,7 @@
+{-| very much like `ExceptT`; but that errors are reported direct to stderr -}
 module BasePlus.EMonad
   ( ꙗ, ꙝ, ꙝ', runEMonad, runEMonadX )
 where
-
-{-| very much like `ExceptT`; but that errors are reported direct to stderr -}
 
 import Base0
 

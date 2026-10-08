@@ -3,7 +3,7 @@ name:                base-plus
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             0.0.1.0
+version:             0.0.2.0
 synopsis:            my additions to the base package
 description:         my additions to the base package
 cabal-version:       >= 1.10
@@ -24,10 +24,13 @@ library
                     , BasePlus.UTCTime
   other-modules:
   default-extensions: ExistentialQuantification
+                    , FlexibleContexts
                     , FlexibleInstances
                     , GeneralizedNewtypeDeriving
+                    , LambdaCase
                     , MultiParamTypeClasses
                     , PatternSynonyms
+                    , ScopedTypeVariables
                     , TypeSynonymInstances
                     , UnicodeSyntax
 
