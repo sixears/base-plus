@@ -1,11 +1,11 @@
-{-| additions to the base package -}
-module BasePlus
+{-| additions to the base package for `Maybe` -}
+module BasePlus.Maybe
   ( whenJust )
 where
 
 -- more-unicode ------------------------
 
-import Data.MoreUnicode.Maybe    ( 𝕄, pattern 𝓙, pattern 𝓝 )
+import Data.MoreUnicode.Maybe  ( 𝕄, pattern 𝓙, pattern 𝓝 )
 
 --------------------------------------------------------------------------------
 

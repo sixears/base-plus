@@ -1,3 +1,7 @@
+0.0.4.0 2026-10-12
+==================
+- BasePlus.whenJust -> BasePlus.Maybe.whenJust
+
 0.0.3.0 2026-10-08
 ==================
 - export BasePlus.EMonad.EMonad, BasePlus.EMonad.eMonad

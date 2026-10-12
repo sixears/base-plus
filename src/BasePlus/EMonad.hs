@@ -73,7 +73,7 @@ runEMonadX x m = runEMonadE m ≫ x
 {-| run a sequence of potentially errorful computations; writing any failures to
     stderr, maybe returning a result -}
 runEMonad ∷ ∀ ε α μ . (MonadIO μ, Printable ε) => EMonad ε μ α → μ (𝕄 α)
-runEMonad = runEMonadX eToStderr -- runEMonadE m ≫ eToStderr
+runEMonad = runEMonadX eToStderr
 
 {-| shortcut for making and running an `EMonad`, with a unicode alias -}
 ꙝ ∷ ∀ ε α μ . (MonadIO μ, Printable ε) => ExceptT ε μ α → μ (𝕄 α)
