@@ -1,3 +1,7 @@
+0.0.5.0 2026-10-14
+==================
+- +BasePlus.Word64
+
 0.0.4.0 2026-10-12
 ==================
 - BasePlus.whenJust -> BasePlus.Maybe.whenJust
