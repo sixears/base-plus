@@ -3,7 +3,7 @@ name:                base-plus
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             0.0.5.0
+version:             0.0.6.0
 synopsis:            my additions to the base package
 description:         my additions to the base package
 cabal-version:       >= 1.10
@@ -22,6 +22,7 @@ library
                     , BasePlus.New
                     , BasePlus.StdErr
                     , BasePlus.UTCTime
+                    , BasePlus.Word16
                     , BasePlus.Word64
   other-modules:
   default-extensions: ExistentialQuantification
