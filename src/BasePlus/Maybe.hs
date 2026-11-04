@@ -3,6 +3,10 @@ module BasePlus.Maybe
   ( whenJust )
 where
 
+-- base --------------------------------
+
+import Control.Monad  ( Monad, return )
+
 -- more-unicode ------------------------
 
 import Data.MoreUnicode.Maybe  ( 𝕄, pattern 𝓙, pattern 𝓝 )

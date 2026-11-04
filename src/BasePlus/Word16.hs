@@ -6,7 +6,8 @@ where
 
 -- base --------------------------------
 
-import Data.Word  ( Word16 )
+import Data.Function  ( id )
+import Data.Word      ( Word16 )
 
 -- lens --------------------------------
 

@@ -1,3 +1,7 @@
+0.0.7.0 2026-11-04
+==================
+- +BasePlus.BytesParse.{parseBytes,parserBytes}
+
 0.0.6.0 2026-10-15
 ==================
 - +BasePlus.Word16

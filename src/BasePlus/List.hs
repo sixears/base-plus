@@ -3,6 +3,10 @@ module BasePlus.List
   ( firstJust, takeWhileM )
 where
 
+-- base --------------------------------
+
+import Control.Monad  ( Monad, return )
+
 -- more-unicode ------------------------
 
 import Data.MoreUnicode.Bool     ( 𝔹 )
