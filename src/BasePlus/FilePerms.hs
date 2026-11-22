@@ -17,15 +17,11 @@ import Prelude  ( error )
 
 -- base --------------------------------
 
-import Control.Applicative  ( (<|>) )
-import Control.Monad        ( fail )
-import Data.Bits            ( setBit,clearBit,complement,(.&.),(.|.),(.>>.) )
-import Data.Char            ( Char, isAlpha, isOctDigit, digitToInt )
-import Data.Enum            ( fromEnum )
-import Data.Functor         ( void )
-import Data.List            ( foldl' )
-import Data.Word            ( Word16 )
-import GHC.Real             ( Integral )
+import Control.Monad  ( fail )
+import Data.Bits      ( complement, (.&.), (.|.), (.>>.) )
+import Data.Char      ( Char, isAlpha, isOctDigit, digitToInt )
+import Data.Functor   ( void )
+import GHC.Real       ( Integral )
 
 -- base-unicode-symbols ----------------
 
@@ -37,7 +33,6 @@ import Data.MoreUnicode.Applicative  ( (⋪), (⋫), (∤) )
 import Data.MoreUnicode.Bool         ( pattern 𝓕, pattern 𝓣 )
 import Data.MoreUnicode.Char         ( ℂ )
 import Data.MoreUnicode.Either       ( 𝔼, pattern 𝓛, pattern 𝓡 )
-import Data.MoreUnicode.Functor      ( (⊳) )
 import Data.MoreUnicode.Monoid       ( ф, ю )
 import Data.MoreUnicode.String       ( 𝕊 )
 import Data.MoreUnicode.Text         ( 𝕋 )
@@ -52,7 +47,7 @@ import Test.Tasty  ( TestTree, defaultMain, testGroup )
 
 -- tasty-hunit -------------------------
 
-import Test.Tasty.HUnit  ( Assertion, assertBool, assertFailure,testCase,(@?=) )
+import Test.Tasty.HUnit  ( Assertion, assertBool, assertFailure, testCase )
 
 -- text --------------------------------
 
@@ -60,7 +55,7 @@ import qualified  Data.Text  as  T
 
 -- tfmt --------------------------------
 
-import Text.Fmt  ( fmt, fmtT )
+import Text.Fmt  ( fmt )
 
 -- trifecta ----------------------------
 
@@ -97,7 +92,7 @@ import Text.Trifecta  ( Parser, Result( Failure, Success )
 
 {-| assert a parse failure -}
 (~!~) ∷ Show α => Result α → 𝕊 → Assertion
-(Failure x) ~!~ _ = return ()
+(Failure _) ~!~ _ = return ()
 (Success x) ~!~ y =
   assertFailure $ ю ["expected failure for ", show y, ", got ", show x]
 
@@ -108,10 +103,6 @@ import Text.Trifecta  ( Parser, Result( Failure, Success )
   let isFailure (Failure _) = 𝓣
       isFailure (Success _) = 𝓕
   in  testCase msg $ assertBool str (isFailure $ parseString (p⋪eof) ф str)
---      isFailure (Failure _) = 𝓣
---      isFailure (Success _) = 𝓕
-
---       , testCase "leading '-' should fail" $ assertBool "g-r" (isFailure $ parseString chmodMode ф "g-r")
 
 
 ------------------------------------------------------------
@@ -295,6 +286,7 @@ chmodMode = do
   return $ fst result
   where
 
+    unWho ∷ Word16 → 𝕊
     unWho 0o4700 = "u"
     unWho 0o6770 = "ug"
     unWho 0o2070 = "g"
@@ -390,10 +382,9 @@ chmodMode = do
 chmodModeTests ∷ TestTree
 chmodModeTests =
   let x ≈ y = (chmodMode ⋪ eof,x) ~~~ y
-      isFailure (Failure _) = 𝓣
-      isFailure (Success _) = 𝓕
 
-      s ‼‼ m = (chmodMode, s) ‼ s
+      (‼‼) ∷ 𝕊 → 𝕊 → TestTree
+      s ‼‼ m = (chmodMode, s) ‼ [fmt|%w : %s|] s m
 
   in  testGroup "chmodMode"
         [ "u+r"   ≈ 0o400
@@ -587,6 +578,7 @@ Apologies for the arithmetic wobble mid-answer — the final, correct expectatio
 
 -}
 
+tests ∷ TestTree
 tests = testGroup "FilePerms" [ octalModeTests, lsModeTests, chmodModeTests ]
 
 _test ∷ IO()
