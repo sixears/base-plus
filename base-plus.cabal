@@ -41,7 +41,7 @@ library
                     , TypeSynonymInstances
                     , UnicodeSyntax
 
-  build-depends:      async, base, base-unicode-symbols, lens, tasty
+  build-depends:      async, base, base-unicode-symbols, lens, parsers, tasty
                     , tasty-hunit, text, time, trifecta
 
                     , base0         >= 0.0.5.0

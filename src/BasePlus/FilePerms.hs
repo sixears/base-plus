@@ -13,7 +13,6 @@ module BasePlus.FilePerms
 where
 
 import Base0
-import Debug.Trace  ( traceShow )
 import Prelude  ( error )
 
 -- base --------------------------------
@@ -21,8 +20,9 @@ import Prelude  ( error )
 import Control.Applicative  ( (<|>) )
 import Control.Monad        ( fail )
 import Data.Bits            ( setBit,clearBit,complement,(.&.),(.|.),(.>>.) )
-import Data.Char            ( Char, isOctDigit, digitToInt )
+import Data.Char            ( Char, isAlpha, isOctDigit, digitToInt )
 import Data.Enum            ( fromEnum )
+import Data.Functor         ( void )
 import Data.List            ( foldl' )
 import Data.Word            ( Word16 )
 import GHC.Real             ( Integral )
@@ -33,7 +33,7 @@ import Prelude.Unicode  ( (×) )
 
 -- more-unicode ------------------------
 
-import Data.MoreUnicode.Applicative  ( (⋫), (∤) )
+import Data.MoreUnicode.Applicative  ( (⋪), (⋫), (∤) )
 import Data.MoreUnicode.Bool         ( pattern 𝓕, pattern 𝓣 )
 import Data.MoreUnicode.Char         ( ℂ )
 import Data.MoreUnicode.Either       ( 𝔼, pattern 𝓛, pattern 𝓡 )
@@ -41,6 +41,10 @@ import Data.MoreUnicode.Functor      ( (⊳) )
 import Data.MoreUnicode.Monoid       ( ф, ю )
 import Data.MoreUnicode.String       ( 𝕊 )
 import Data.MoreUnicode.Text         ( 𝕋 )
+
+-- parsers -----------------------------
+
+import Text.Parser.LookAhead  ( lookAhead )
 
 -- tasty -------------------------------
 
@@ -62,7 +66,7 @@ import Text.Fmt  ( fmt, fmtT )
 
 import Text.Trifecta  ( Parser, Result( Failure, Success )
                       , char, choice, eof, oneOf, option, parseString, satisfy
-                      , sepBy1, spaces, unexpected
+                      , sepBy1, spaces, string, try, unexpected
                       )
 
 --------------------------------------------------------------------------------
@@ -79,7 +83,7 @@ import Text.Trifecta  ( Parser, Result( Failure, Success )
 {-| check the value of a successful parse -}
 (~~~) ∷ (Eq α, Show α, Integral α) => (Parser α, 𝕊) → α → TestTree
 (p,x) ~~~ exp = testCase (show x) $
-  case parseString p ф x of
+  case parseString (p ⋪ eof) ф x of
     Success r → assertBool ([fmt|0o%04o ≡ 0o%04o|] r exp) (r ≡ exp)
     Failure e → assertFailure (show e)
 {-
@@ -103,7 +107,7 @@ import Text.Trifecta  ( Parser, Result( Failure, Success )
 (p,str) ‼ msg =
   let isFailure (Failure _) = 𝓣
       isFailure (Success _) = 𝓕
-  in  testCase msg $ assertBool str (isFailure $ parseString p ф str)
+  in  testCase msg $ assertBool str (isFailure $ parseString (p⋪eof) ф str)
 --      isFailure (Failure _) = 𝓣
 --      isFailure (Success _) = 𝓕
 
@@ -128,13 +132,13 @@ octalModeTests ∷ TestTree
 octalModeTests =
   testGroup "octalMode" $
     [ testCase "plain octal 0777" $
-        parseString octalMode ф "0777" ~~ 0o777
+        parseString (octalMode ⋪ eof) ф "0777" ~~ 0o777
     , testCase "octal with special bits 07777" $
-        parseString octalMode ф "07777" ~~ 0o7777
+        parseString (octalMode ⋪ eof) ф "07777" ~~ 0o7777
     , testCase "octal without leading zero is rejected" $
-        parseString octalMode ф "777" ~!~ "octalMode:777"
+        parseString (octalMode ⋪ eof) ф "777" ~!~ "octalMode:777"
     , testCase "octal above 07777 is rejected" $
-        parseString octalMode ф "010000" ~!~ "octalMode:010000"
+        parseString (octalMode ⋪ eof) ф "010000" ~!~ "octalMode:010000"
     ]
 
 --------------------
@@ -194,23 +198,23 @@ lsModeTests ∷ TestTree
 lsModeTests =
   testGroup "lsMode"
     [ testCase "plain permissions rwxr-xr--" $
-        parseString lsMode ф "rwxr-xr--" ~~ 0o754
+        parseString (lsMode ⋪ eof) ф "rwxr-xr--" ~~ 0o754
     , testCase "special bits --------T" $
-        parseString lsMode ф "--------T" ~~ 0o1000
+        parseString (lsMode ⋪ eof) ф "--------T" ~~ 0o1000
     , testCase "special bits --------t" $
-        parseString lsMode ф "--------t" ~~ 0o1001
+        parseString (lsMode ⋪ eof) ф "--------t" ~~ 0o1001
     , testCase "special bits --S------" $
-        parseString lsMode ф "--S------" ~~ 0o4000
+        parseString (lsMode ⋪ eof) ф "--S------" ~~ 0o4000
     , testCase "special bits --s------" $
-        parseString lsMode ф "--s------" ~~ 0o4100
+        parseString (lsMode ⋪ eof) ф "--s------" ~~ 0o4100
     , testCase "special bits -----S---" $
-        parseString lsMode ф "-----S---" ~~ 0o2000
+        parseString (lsMode ⋪ eof) ф "-----S---" ~~ 0o2000
     , testCase "special bits -----s---" $
-        parseString lsMode ф "-----s---" ~~ 0o2010
+        parseString (lsMode ⋪ eof) ф "-----s---" ~~ 0o2010
     , testCase "normal bits rwxr--r-x" $
-        parseString lsMode ф "rwxr--r-x" ~~ 0o0745
+        parseString (lsMode ⋪ eof) ф "rwxr--r-x" ~~ 0o0745
     , testCase "special bits rwsr-Sr-t" $
-        parseString lsMode ф "rwsr-Sr-t" ~~ (0o0745.|.0o4100.|.0o2000.|.0o1001)
+        parseString (lsMode ⋪ eof) ф "rwsr-Sr-t" ~~ (0o0745.|.0o4100.|.0o2000.|.0o1001)
     ]
 
 
@@ -288,7 +292,7 @@ chmodMode ∷ Parser Word16
 chmodMode = do
   clauses ← chmodClause `sepBy1` char ','
   result  ← foldM applyClause (0,0) clauses
-  traceShow ("clauses", (\ (who,op,perms) → (unWho who,op,[fmtT|0o%04o|] perms)) ⊳ clauses) $ return (fst ({- foldl' -} result))
+  return $ fst result
   where
 
     unWho 0o4700 = "u"
@@ -313,14 +317,14 @@ chmodMode = do
                        then 𝓛 $ [fmt|attempt to use '-' clause on user %w without prior setting clause|] (unWho who)
                        else 𝓡 $ m .&. (complement pp) -- m .|. -- (who - pp)
                      _   → 𝓛 $ [fmt|chmodMode applyClause op %w|] op
-      in traceShow ("applyClause", [fmtT|0o%04o|] m, unWho who, [fmtT|0o%04o|] perms, [fmtT|0o%04o|] pp, [fmtT|0o%04o|] ⊳ result) $ either fail (\ r → return (r,users_so_far .|. who)) result
+      in either fail (\ r → return (r,users_so_far .|. who)) result
 
 -- XXX '-' shouldn't apply to s/t, I think, except for overriding prior (l-r)
 -- requests?
 
     whoParser = do
-      ws ← some (oneOf "ugoa")
-      return (foldr ((.|.) . whoBit) 0 ws)
+      ws ← some (oneOf "ugo") ∤ string "a"
+      return (foldr ((.|.) ∘ whoBit) 0 ws)
     whoBit 'u' = 0o4700
     whoBit 'g' = 0o2070
     whoBit 'o' = 0o1007
@@ -332,10 +336,31 @@ chmodMode = do
     -- Expand s/S/t/T into concrete bits per the who-list.
     permsParser ∷ Word16 → Parser Word16
     permsParser who = do
-      ps ← many (oneOf "rwxstSTa")
-      let base     = foldr ((.|.) . permBit)     0 ps
-          specials = foldr ((.|.) . specialBit who) 0 ps
-      traceShow ("permsParser", "ps", ps, "base", [fmtT|0o%04o|] base, "who", [fmtT|0o%04o|] who, "specials", [fmtT|0o%04o|] specials, [fmtT|0o%04o|] ⊳ (specialBit who ⊳ ps)) $ return (base .|. specials)
+--      ps ← many (oneOf "rwxstSTa")
+-- --      ps ← choice [ try (many (oneOf "rwxstST")), (many (oneOf "stSTa")) ]
+
+    -- Termination test: input ended, or next char is not alphabetic.
+    -- `lookAhead` consumes nothing in either case.
+      let end_of_token ∷ Parser ()
+          end_of_token = eof ∤ void (lookAhead (satisfy (not ∘ isAlpha)))
+
+      -- don't allow mixing of 'rwx' with 'a'
+
+      -- ‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼
+
+      -- likewise, sttT don't make sense with x, as sStT imply x or not
+
+      -- ‼¡‼ check that we don't mix ST with a, as the a implies st ‼¡‼
+
+      -- ‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼‼¡‼
+
+--      ps ← choice [try (some (oneOf "rwxstST") {- <* eof -}), (some (oneOf "stSTa") {- <* eof -})]
+      ps ← choice [try (some (oneOf "rwxstST") ⋪ end_of_token), (some (oneOf "stSTa") ⋪ end_of_token)]
+      let base     = foldr ((.|.) ∘ permBit)     0 ps
+          specials = foldr ((.|.) ∘ specialBit who) 0 ps
+      return (base .|. specials)
+
+
 
     permBit ∷ Char → Word16
     permBit 'r' = 0o444
@@ -359,14 +384,16 @@ chmodMode = do
     chmodClause = do
       who ← option 0o7777 whoParser   -- empty lhs == 'a'
       op ← opParser
-      perms ← traceShow("chmodClause", [fmtT|0o%04o|] who) $ permsParser who
+      perms ← permsParser who
       return (who, op, perms)
 
 chmodModeTests ∷ TestTree
 chmodModeTests =
-  let x ≈ y = (chmodMode,x) ~~~ y
+  let x ≈ y = (chmodMode ⋪ eof,x) ~~~ y
       isFailure (Failure _) = 𝓣
       isFailure (Success _) = 𝓕
+
+      s ‼‼ m = (chmodMode, s) ‼ s
 
   in  testGroup "chmodMode"
         [ "u+r"   ≈ 0o400
@@ -375,57 +402,53 @@ chmodModeTests =
         , "u/x"   ≈ 0o600
         , "u+rw"  ≈ 0o600
 
+        , "u+rw,g/w,o+x" ≈ 0o651
+        , "u+rw,g/w,o-x" ‼‼ "o-x without prior 'o' should fail"
+        , "ug+wx" ≈ 0o330
+        , "a+rx"  ≈ 0o555
+        , "a=rx"  ≈ 0o555
+        , "a/w"  ≈ 0o555
+        , "+rx"  ≈ 0o555
+        , "=rx"  ≈ 0o555
+        , "/w"  ≈ 0o555
+        , "ga+rx" ‼‼ "cannot mix 'a' with other who"
+        , "g+rxa" ‼‼ "cannot mix 'a' with other perms"
+        , "g+sa,o=rx" ≈ 0o2075
 
-{-
-    "u+rw,g/w,o-x"  -  rw-r-xrw-
-    "u+s,+t,o=a"    -  --s---rwt
-    "ug+wx"         -  -wx-wx---
-    "a+rx"          -  r-xr-xr-x
-    "a=rx"          -  r-xr-xr-x
-    "a/w"           -  r-xr-xr-x
-    "+rx"           -  r-xr-xr-x
-    "=rx"           -  r-xr-xr-x
-    "/w"            -  r-xr-xr-x
-    "ga+rx" -- FAIL -  cannot mix "a" with other who
-    "g+rxa" -- FAIL -  cannot mix "a" with other bit
+        ,   "g+rx" ≈ 0o050
+        ,   "u+rw,g+rw" ≈ 0o660
+        ,   "g/r" ≈ 0o030
+        ,   "o=a" ≈ 0o007
+        , "g-r" ‼‼ "leading '-' should fail"
+        , "u+x,g-r" ‼‼ "leading '-' should fail (absent g+)"
+        , "g+x,g-r" ≈ 0o010
+        , "g+a,g-r" ≈ 0o030
+        , "a+x,g-r" ≈ 0o111
+        , "a+a,g-r" ≈ 0o737
 
--}
+        , "a+x,g-r" ≈ 0o111
+        , "o=a,g-w" ‼‼ "'-' g should fail after (only) o clause"
+        , "go=a,g-w" ≈ 0o057
+        , "a=a,g-w" ≈ 0o757
 
-        -- testCase "u+rw" $
---          (chmodMode,"u+rw") ~~~ 0o600
-      , -- testCase "g+rw" $
-          "g+rx" ≈ 0o050
-      ,   "u+rw,g+rw" ≈ 0o660
-      ,   "g/r" ≈ 0o030
-      ,   "o=a" ≈ 0o007
-      , (chmodMode, "g-r") ‼ "leading '-' should fail"
-      , (chmodMode, "u+x,g-r") ‼ "leading '-' should fail (absent g+)"
-      , "g+x,g-r" ≈ 0o010
-      , "g+a,g-r" ≈ 0o030
-      , "a+x,g-r" ≈ 0o111
-      , "a+a,g-r" ≈ 0o737
-
-      , "a+x,g-r" ≈ 0o111
-      , (chmodMode, "o=a,g-w") ‼ "'-' g should fail after (only) o clause"
-      , "go=a,g-w" ≈ 0o057
-      , "a=a,g-w" ≈ 0o757
-
-      , "a+rw,g-w" ≈ 0o646
-      , (chmodMode,"u+rw,g-w") ‼ "'-' g should fail due to only prior (u) clause"
-      , (chmodMode,"u+rw,g-w,o=a") ‼ "'-' g should fail due to only prior (u) clause"
-      , (chmodMode,"u+rw,o=a,g-w") ‼ "'-' g should fail due to only prior (u+o) clauses"
-      , "u+rw,a=a,g-w" ≈ 0o757
-      , "a+rw,o-w" ≈ 0o664
-      , "u+x" ≈ 0o0100
-      , "u+s" ≈ 0o4100
-      , "u+S" ≈ 0o4000
--- test for ordering, with a=g,r-x reading l→r so r-x "overrides"
-      , "+t" ≈ 0o1001
-      , "u+s,+t" ≈ 0o5101
-      , "u=rwS,o=rT" ≈ 0o5604
-      , "u=rwS,g=s,o=rT" ≈ 0o7614
-      , "u=rwS,g=s,o=rT,a-r" ≈ 0o7210
-      ]
+        , "a+rw,g-w" ≈ 0o646
+        , "u+rw,g-w" ‼‼ "'-' g should fail due to only prior (u) clause"
+        , "u+rw,g-w,o=a" ‼‼ "'-' g should fail due to only prior (u) clause"
+        , "u+rw,o=a,g-w" ‼‼ "'-' g should fail due to only prior (u+o) clauses"
+        , "u+rw,a=a,g-w" ≈ 0o757
+        , "a+rw,o-w" ≈ 0o664
+        , "u+x" ≈ 0o0100
+        , "u+s" ≈ 0o4100
+        , "u+S" ≈ 0o4000
+        , "+t" ≈ 0o1001
+        , "u+s,+t" ≈ 0o5101
+        , "u+s,+t,o=a" ≈ 0o5107
+        , "u+s,+T,o=a" ≈ 0o5107
+        , "u=rwS,o=rT" ≈ 0o5604
+        , "u=rwS,g=s,o=rT" ≈ 0o7614
+        -- test for ordering, with reading l→r so a-r "overrides"
+        , "u=rwS,g=s,o=rT,a-r" ≈ 0o7210
+        ]
 
 ----------------------------------------
 
