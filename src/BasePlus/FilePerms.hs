@@ -1,8 +1,13 @@
-{-| functions for working with a filemode (A.K.A., `CMode`), that is, the Word16
-    passed around UFS & derivatives for the ugo±rw[xsStT],
+{-| Functions for working with a filemode (A.K.A., `CMode`), that is, the Word16
+    passed around UFS & derivatives for the ugo±rw[xsStT] file permissions.
 
-     POSIX refers to the stat.st_mode bits corresponding to the mask S_IFMT (see below) as the file type, the 12 bits corresponding to the mask 07777 as the file mode bits and the least significant 9 bits (0777) as the file permission bits.
+    POSIX refers to the stat.st_mode bits corresponding to the mask S_IFMT (see
+    below) as the file type, the 12 bits corresponding to the mask 07777 as the
+    file mode bits and the least significant 9 bits (0777) as the file
+    permission bits.
 
+    Note that these functions do not handle the file type (block, regular,
+    socket, etc.)
 -}
 
 -- !!! XXX !!!
@@ -47,7 +52,7 @@ import Test.Tasty  ( TestTree, defaultMain, testGroup )
 
 -- tasty-hunit -------------------------
 
-import Test.Tasty.HUnit  ( Assertion, assertBool, assertFailure, testCase )
+import Test.Tasty.HUnit  ( Assertion,(@?=),assertBool,assertFailure,testCase )
 
 -- text --------------------------------
 
@@ -55,7 +60,7 @@ import qualified  Data.Text  as  T
 
 -- tfmt --------------------------------
 
-import Text.Fmt  ( fmt )
+import Text.Fmt  ( fmt, fmtT )
 
 -- trifecta ----------------------------
 
@@ -448,10 +453,10 @@ permLSTxt ∷ Word16 → 𝕋
 permLSTxt p =
   let -- fstat user perms
       permsUser  ∷ Word8
-      permsUser  = fromIntegral $ p .&. 0o700 .>>. 6
+      permsUser  = fromIntegral $ (p .&. 0o700) .>>. 6
       -- fstat group perms
       permsGroup ∷ Word8
-      permsGroup = fromIntegral $ p .&. 0o070 .>>. 3
+      permsGroup = fromIntegral $ (p .&. 0o070) .>>. 3
       -- fstat other perms
       permsOther ∷ Word8
       permsOther = fromIntegral $ p .&. 0o007
@@ -472,6 +477,22 @@ permLSTxt p =
         ю [ t' "r" 4 n, t' "w" 2 n, t'' "x" 1 s x n ]
   in  [fmt|%t%t%t|] (t "s" 0o4000 $ permsUser) (t "s" 0o2000 $ permsGroup)
                     (t "t" 0o1000 $ permsOther)
+
+--------------------
+
+permLSTxtTests ∷ TestTree
+permLSTxtTests =
+  let x ≈ s = testCase ([fmt|0o%04o ≈ %w|] x s) $ permLSTxt x @?= s
+  in  testGroup "permLSTxt" $
+        [ 0o0000 ≈ "---------"
+        , 0o0333 ≈ "-wx-wx-wx"
+        , 0o0444 ≈ "r--r--r--"
+        , 0o0666 ≈ "rw-rw-rw-"
+        , 0o0777 ≈ "rwxrwxrwx"
+        , 0o0654 ≈ "rw-r-xr--"
+        , 0o7000 ≈ "--S--S--T"
+        , 0o7777 ≈ "rwsrwsrwt"
+        ]
 
 ----------------------------------------
 
@@ -579,7 +600,8 @@ Apologies for the arithmetic wobble mid-answer — the final, correct expectatio
 -}
 
 tests ∷ TestTree
-tests = testGroup "FilePerms" [ octalModeTests, lsModeTests, chmodModeTests ]
+tests = testGroup "FilePerms" [ octalModeTests, lsModeTests
+                              , chmodModeTests, permLSTxtTests ]
 
 _test ∷ IO()
 _test = defaultMain tests
