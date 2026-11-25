@@ -497,11 +497,7 @@ permLSTxtTests =
 ----------------------------------------
 
 filePermsParser ∷ Parser Word16
-filePermsParser = spaces ⋫ choice
-  [ (\m → m) <$> octalMode
-  , (\m → m) <$> lsMode
-  , (\m → m)  <$> chmodMode
-  ] <* spaces <* eof
+filePermsParser = spaces ⋫ choice [ octalMode, lsMode, chmodMode] ⋪ spaces ⋪ eof
 
 parseFilePerms ∷ String → Result Word16
 parseFilePerms = parseString filePermsParser ф
