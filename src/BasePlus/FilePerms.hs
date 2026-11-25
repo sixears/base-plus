@@ -496,71 +496,33 @@ permLSTxtTests =
 
 ----------------------------------------
 
-filePermsParser ∷ Parser (Word16, Bool)
+filePermsParser ∷ Parser Word16
 filePermsParser = spaces ⋫ choice
-  [ (\m → (m, 𝓕)) <$> octalMode
-  , (\m → (m, 𝓕)) <$> lsMode
-  , (\m → (m, 𝓣))  <$> chmodMode
+  [ (\m → m) <$> octalMode
+  , (\m → m) <$> lsMode
+  , (\m → m)  <$> chmodMode
   ] <* spaces <* eof
 
-parseFilePerms ∷ String → Result (Word16, Bool)
+parseFilePerms ∷ String → Result Word16
 parseFilePerms = parseString filePermsParser ф
 
+--------------------
+
+parseFilePermsTests ∷ TestTree
+parseFilePermsTests =
+  let perms ≈ exp = case (parseFilePerms perms) of
+        Success r → testCase perms $ do
+          assertBool ([fmt|expected: 0o%04o, got 0o%04o|] exp r) (r ≡ exp)
+  in  testGroup "parseFilePerms" $
+        [ -- 0o0000 ≈ "---------"
+--          testCase "special bits rwsr-Sr-t" $
+--            (parseFilePerms "rwsr-Sr-t") @?= Success (0o7744, 𝓕)
+          "rwsr-Sr-t" ≈ 0o7744
+        ]
+
 -- tests ---------------------------------------------------
-{-
-
-{-# LANGUAGE OverloadedStrings #-}
-
-module Main (main) where
-
-import Text.Trifecta (Result (..))
-
-import CPerms (parseFilePerms)
-
--- | Extract the value from a successful parse, failing the test otherwise.
-ok ∷ Result (Word16, Bool) → (Word16, Bool)
-ok (Success r) = r
-ok (Failure d) = error ("unexpected parse failure: " ++ show d)
-
--- | Assert that the input fails to parse.
-rejects ∷ String → Result (Word16, Bool) → Assertion
-rejects what (Failure _) = return ()
-rejects what (Success r) =
-  assertFailure ("expected failure for " ++ show what ++ ", got " ++ show r)
-
-main ∷ IO ()
-main = defaultMain tests
-
-tests ∷ TestTree
-tests = testGroup "cperms parser"
-  [ testGroup "octal"
-      [ testCase "plain octal 0777" $
-          ok (parseFilePerms "0777") @?= (0o777, 𝓕)
-      , testCase "octal with special bits 07777" $
-          ok (parseFilePerms "07777") @?= (0o7777, 𝓕)
-      , testCase "octal without leading zero is rejected" $
-          rejects "777" (parseFilePerms "777")
-      , testCase "octal above 07777 is rejected" $
-          rejects "010000" (parseFilePerms "010000")
-      ]
-  , testGroup "ls-style"
-      [ testCase "plain permissions rwxr-xr--" $
-          ok (parseFilePerms "rwxr-xr--") @?= (0o754, 𝓕)
-      , testCase "special bits rwsr-Sr-t" $
-          ok (parseFilePerms "rwsr-Sr-t") @?= (0o7774, 𝓕)
-      ]
-  , testGroup "chmod-style"
-      [ testCase "comma-separated clauses u+rw,g-w,o=a" $
-          ok (parseFilePerms "u+rw,g-w,o=a") @?= (0o644, 𝓣)
-      , testCase "s/t imply execute: u+s,+t" $
-          ok (parseFilePerms "u+s,+t") @?= (0o4111 .|. 0o4000 .|. 0o1000, 𝓣)
-      , testCase "S/T give special bits without execute: u=rwS,o=rT" $
-          ok (parseFilePerms "u=rwS,o=rT") @?= (0o644 .|. 0o4000 .|. 0o1000, 𝓣)
-      ]
-  ]
 
 {-
-
 A few notes on the cases:
 0777 — the basic octal path; Bool is False.
 07777 — confirms all four high bits (setuid, setgid, sticky, and the leading octal digit) round-trip.
@@ -597,11 +559,10 @@ Apologies for the arithmetic wobble mid-answer — the final, correct expectatio
 
 -}
 
--}
-
 tests ∷ TestTree
 tests = testGroup "FilePerms" [ octalModeTests, lsModeTests
-                              , chmodModeTests, permLSTxtTests ]
+                              , chmodModeTests, permLSTxtTests
+                              , parseFilePermsTests ]
 
 _test ∷ IO()
 _test = defaultMain tests
